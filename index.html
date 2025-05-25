@@ -207,21 +207,72 @@
             display: block;
         }
 
-        .skip-verification {
+        .captcha-status.loading {
+            background-color: rgba(139, 92, 246, 0.1);
+            color: var(--primary-light);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            display: block;
+        }
+
+        .verification-controls {
             margin-top: 20px;
-            padding: 10px 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .verify-btn, .skip-verification {
+            padding: 12px 24px;
+            border: none;
             border-radius: var(--border-radius);
-            color: var(--light);
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             font-family: var(--font-secondary);
         }
 
+        .verify-btn {
+            background: linear-gradient(45deg, var(--primary), var(--primary-light));
+            color: white;
+        }
+
+        .verify-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(109, 40, 217, 0.4);
+        }
+
+        .skip-verification {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--light);
+        }
+
         .skip-verification:hover {
             background: rgba(255, 255, 255, 0.2);
             transform: translateY(-2px);
+        }
+
+        /* Verification Mode Toggle */
+        .verification-mode {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10001;
+            background: var(--dark);
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: var(--font-secondary);
+            font-size: 0.9rem;
+        }
+
+        .verification-mode select {
+            background: var(--darker);
+            color: var(--light);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            padding: 5px;
+            margin-left: 10px;
         }
 
         /* Main Content */
@@ -1270,6 +1321,13 @@
             .theme-toggle {
                 margin-left: auto;
             }
+
+            .verification-mode {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-bottom: 20px;
+            }
         }
 
         .verification-progress {
@@ -1307,24 +1365,6 @@
             z-index: 2;
         }
 
-        .verify-btn {
-            background: linear-gradient(45deg, var(--primary), var(--primary-light));
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: var(--border-radius);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 15px;
-            font-family: var(--font-secondary);
-        }
-
-        .verify-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(109, 40, 217, 0.4);
-        }
-
         .loading-spinner {
             display: inline-block;
             width: 16px;
@@ -1342,6 +1382,16 @@
     </style>
 </head>
 <body>
+    <!-- Verification Mode Control -->
+    <div class="verification-mode" id="verification-mode">
+        <label>Verification Mode:</label>
+        <select id="mode-selector" onchange="changeVerificationMode()">
+            <option value="auto">Auto (Invisible)</option>
+            <option value="visible">Always Show</option>
+            <option value="disabled">Disabled</option>
+        </select>
+    </div>
+
     <!-- reCAPTCHA Verification Overlay -->
     <div class="captcha-overlay" id="captcha-overlay">
         <div class="captcha-container">
@@ -1361,9 +1411,14 @@
                 
                 <div class="captcha-status" id="captcha-status"></div>
                 
-                <button class="skip-verification" onclick="skipVerification()">
-                    Skip Verification (For Testing)
-                </button>
+                <div class="verification-controls">
+                    <button class="verify-btn" onclick="manualVerification()" style="display: none;" id="manual-verify-btn">
+                        Continue to Website
+                    </button>
+                    <button class="skip-verification" onclick="skipVerification()">
+                        Skip Verification (For Testing)
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1528,7 +1583,7 @@
     <script>
         // Global variables
         let captchaVerified = false;
-        let showCaptcha = true; // Enable captcha by default
+        let verificationMode = 'auto'; // 'auto', 'visible', 'disabled'
 
         // Check if user has already been verified
         function checkExistingVerification() {
@@ -1543,8 +1598,32 @@
             return false;
         }
 
+        // Change verification mode
+        function changeVerificationMode() {
+            const selector = document.getElementById('mode-selector');
+            verificationMode = selector.value;
+            
+            // Clear existing verification
+            sessionStorage.removeItem('captcha_verified');
+            sessionStorage.removeItem('captcha_timestamp');
+            
+            // Restart verification process
+            location.reload();
+        }
+
         // Initialize reCAPTCHA Enterprise
         function initRecaptchaEnterprise() {
+            const statusDiv = document.getElementById('captcha-status');
+            
+            if (verificationMode === 'disabled') {
+                hideCaptchaOverlay();
+                return;
+            }
+            
+            statusDiv.className = 'captcha-status loading';
+            statusDiv.innerHTML = '<div class="loading-spinner"></div>Performing security check...';
+            statusDiv.style.display = 'block';
+            
             if (typeof grecaptcha !== 'undefined' && grecaptcha.enterprise) {
                 grecaptcha.enterprise.ready(async () => {
                     try {
@@ -1565,20 +1644,17 @@
             const statusDiv = document.getElementById('captcha-status');
             
             try {
-                statusDiv.className = 'captcha-status loading';
-                statusDiv.innerHTML = '<div class="loading-spinner"></div>Verifying your request...';
-                statusDiv.style.display = 'block';
-                
                 const token = await grecaptcha.enterprise.execute('6LcHkkgrAAAAAIkxhzIf5xA8MLEXs20MBSuHp_yf', {
                     action: 'homepage_access'
                 });
                 
                 if (token && token.length > 0) {
-                    // In a real implementation, you would send this token to your backend
-                    // For demo purposes, we'll simulate a successful verification
+                    // Simulate verification delay for visibility
+                    const delay = verificationMode === 'visible' ? 3000 : 1000;
+                    
                     setTimeout(() => {
                         onVerificationSuccess();
-                    }, 2000);
+                    }, delay);
                 } else {
                     throw new Error('No token received');
                 }
@@ -1591,10 +1667,15 @@
         // Handle successful verification
         function onVerificationSuccess() {
             const statusDiv = document.getElementById('captcha-status');
+            const progressIcon = document.querySelector('.progress-icon');
             
             captchaVerified = true;
             statusDiv.className = 'captcha-status success';
             statusDiv.innerHTML = '✅ Verification successful! Welcome to SherrySoft Technologies.';
+            
+            if (progressIcon) {
+                progressIcon.textContent = '✅';
+            }
             
             // Store verification in session
             sessionStorage.setItem('captcha_verified', 'true');
@@ -1609,36 +1690,37 @@
         // Handle verification error
         function onVerificationError() {
             const statusDiv = document.getElementById('captcha-status');
+            const progressIcon = document.querySelector('.progress-icon');
+            
             statusDiv.className = 'captcha-status error';
-            statusDiv.innerHTML = '⚠️ Verification failed. Please try manual verification below.';
+            statusDiv.innerHTML = '⚠️ Automatic verification failed. Please use manual verification.';
+            
+            if (progressIcon) {
+                progressIcon.textContent = '⚠️';
+            }
+            
             showManualVerification();
         }
 
         // Show manual verification option
         function showManualVerification() {
-            const statusDiv = document.getElementById('captcha-status');
-            const captchaWidget = document.querySelector('.captcha-widget');
-            
-            statusDiv.className = 'captcha-status error';
-            statusDiv.innerHTML = '🔧 Automatic verification unavailable. Click below to continue.';
-            statusDiv.style.display = 'block';
-            
-            // Replace the widget with a manual button
-            if (captchaWidget) {
-                captchaWidget.innerHTML = `
-                    <button class="verify-btn" onclick="manualVerification()">
-                        Continue to Website
-                    </button>
-                `;
+            const manualBtn = document.getElementById('manual-verify-btn');
+            if (manualBtn) {
+                manualBtn.style.display = 'block';
             }
         }
 
         // Manual verification fallback
         function manualVerification() {
             const statusDiv = document.getElementById('captcha-status');
+            const progressIcon = document.querySelector('.progress-icon');
             
             statusDiv.className = 'captcha-status success';
             statusDiv.innerHTML = '✅ Manual verification completed. Welcome!';
+            
+            if (progressIcon) {
+                progressIcon.textContent = '✅';
+            }
             
             captchaVerified = true;
             
@@ -1713,8 +1795,13 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
+            // Set initial mode from localStorage
+            const savedMode = localStorage.getItem('verification_mode') || 'auto';
+            verificationMode = savedMode;
+            document.getElementById('mode-selector').value = savedMode;
+            
             // Check if captcha should be shown and if user is already verified
-            if (showCaptcha && !checkExistingVerification()) {
+            if (verificationMode !== 'disabled' && !checkExistingVerification()) {
                 // Show captcha overlay
                 const overlay = document.getElementById('captcha-overlay');
                 const mainContent = document.getElementById('main-content');
@@ -1738,6 +1825,11 @@
             }
         });
 
+        // Save verification mode preference
+        document.getElementById('mode-selector').addEventListener('change', function() {
+            localStorage.setItem('verification_mode', this.value);
+        });
+
         // Custom cursor
         const cursorDot = document.querySelector('.cursor-dot');
         const cursorOutline = document.querySelector('.cursor-outline');
@@ -1747,14 +1839,14 @@
             const posY = e.clientY;
             
             if (cursorDot) {
-                cursorDot.style.left = `${posX}px`;
-                cursorDot.style.top = `${posY}px`;
+                cursorDot.style.left = posX + 'px';
+                cursorDot.style.top = posY + 'px';
             }
             
             if (cursorOutline) {
                 setTimeout(() => {
-                    cursorOutline.style.left = `${posX}px`;
-                    cursorOutline.style.top = `${posY}px`;
+                    cursorOutline.style.left = posX + 'px';
+                    cursorOutline.style.top = posY + 'px';
                 }, 50);
             }
         });
@@ -1766,6 +1858,8 @@
         });
         
         document.addEventListener('mouseenter', function() {
+            if (cursorDot) cursorDot.style.opacity = '1';
+            if (cursorOutline) cursorOutline.style  {
             if (cursorDot) cursorDot.style.opacity = '1';
             if (cursorOutline) cursorOutline.style.opacity = '1';
         });
@@ -1806,24 +1900,24 @@
                 
                 // Random size between 5px and 15px
                 const size = Math.random() * 10 + 5;
-                particle.style.width = `${size}px`;
-                particle.style.height = `${size}px`;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
                 
                 // Random position
                 const posX = Math.random() * 100;
                 const posY = Math.random() * 100;
-                particle.style.left = `${posX}%`;
-                particle.style.top = `${posY}%`;
+                particle.style.left = posX + '%';
+                particle.style.top = posY + '%';
                 
                 // Random animation duration and delay
                 const duration = Math.random() * 10 + 5;
                 const delay = Math.random() * 5;
-                particle.style.animationDuration = `${duration}s`;
-                particle.style.animationDelay = `${delay}s`;
+                particle.style.animationDuration = duration + 's';
+                particle.style.animationDelay = delay + 's';
                 
                 // Random opacity
                 const opacity = Math.random() * 0.1 + 0.05;
-                particle.style.backgroundColor = `rgba(255, 255, 255, ${opacity})`;
+                particle.style.backgroundColor = 'rgba(255, 255, 255, ' + opacity + ')';
                 
                 particlesContainer.appendChild(particle);
             }
@@ -1960,3 +2054,4 @@
     </script>
 </body>
 </html>
+
