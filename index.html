@@ -1,38 +1,40 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SherrySoft Technologies | Empowering the Future Through Software</title>
-  <link rel="icon" href="favicon.png" type="image/png">
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4S048JZWWJ"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-4S048JZWWJ');
-  </script>
-  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SherrySoft Technologies | Empowering the Future Through Software</title>
+    
+    <link rel="icon" href="favicon.png" type="image/png">
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4S048JZWWJ"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-4S048JZWWJ');
+    </script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style> 
+        /* Your CSS styles here */
+    </style>
+
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
-  <h1>Contact Us</h1>
-  <form action="https://formspree.io/f/your_form_id" method="POST">
-    <label>Name:</label><br>
-    <input type="text" name="name" required><br><br>
 
-    <label>Email:</label><br>
-    <input type="email" name="email" required><br><br>
+    <form action="your-server-script.php" method="POST">
+        <div class="g-recaptcha" data-sitekey="6LcHkkgrAAAAAlkxhzif5xA8MLEXs20MBSuHp_yf"></div>
+        
+        <br/>
+        <input type="submit" value="Submit">
+    </form>
 
-    <label>Message:</label><br>
-    <textarea name="message" required></textarea><br><br>
-
-    <div class="g-recaptcha" data-sitekey="6LcHkkgrAAAAAlkxhzif5xA8MLEXs20MBSuHp_yf"></div><br>
-
-    <button type="submit">Send</button>
-  </form>
 </body>
-</html>
-
         :root {
             --primary: #6d28d9;
             --primary-light: #8b5cf6;
